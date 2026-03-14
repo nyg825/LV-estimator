@@ -9,6 +9,18 @@ from construction_estimator.database import HistoricalDatabase
 from construction_estimator.estimator import EstimatorEngine
 from construction_estimator.main import parse_unit_mix
 
+
+def _parse_float(val, default=0.0):
+    """Safely parse a form value to float, handling empty strings."""
+    val = (val or "").replace(",", "").strip()
+    return float(val) if val else default
+
+
+def _parse_int(val, default=0):
+    """Safely parse a form value to int, handling empty strings."""
+    val = (val or "").replace(",", "").strip()
+    return int(float(val)) if val else default
+
 app = Flask(__name__)
 app.jinja_env.globals.update(zip=zip)
 
@@ -55,20 +67,20 @@ def index():
 @app.route("/estimate", methods=["POST"])
 def estimate():
     try:
-        gba_concrete = float(request.form.get("gba_concrete", "0").replace(",", ""))
-        gba_wood = float(request.form.get("gba_wood", "0").replace(",", ""))
-        podium_levels = int(request.form.get("podium_levels", "1"))
-        wood_levels = int(request.form.get("wood_levels", "4"))
-        lot_size = float(request.form.get("lot_size", "0").replace(",", ""))
+        gba_concrete = _parse_float(request.form.get("gba_concrete"))
+        gba_wood = _parse_float(request.form.get("gba_wood"))
+        podium_levels = _parse_int(request.form.get("podium_levels"), 1)
+        wood_levels = _parse_int(request.form.get("wood_levels"), 4)
+        lot_size = _parse_float(request.form.get("lot_size"))
         on_site_parking = bool(request.form.get("on_site_parking"))
         underground_parking = bool(request.form.get("underground_parking"))
-        shored_area = float(request.form.get("shored_area", "0").replace(",", ""))
-        parking_spaces = int(request.form.get("parking_spaces", "0"))
+        shored_area = _parse_float(request.form.get("shored_area"))
+        parking_spaces = _parse_int(request.form.get("parking_spaces"))
 
-        units_0br = int(request.form.get("units_0br", "0"))
-        units_1br = int(request.form.get("units_1br", "0"))
-        units_2br = int(request.form.get("units_2br", "0"))
-        units_3br = int(request.form.get("units_3br", "0"))
+        units_0br = _parse_int(request.form.get("units_0br"))
+        units_1br = _parse_int(request.form.get("units_1br"))
+        units_2br = _parse_int(request.form.get("units_2br"))
+        units_3br = _parse_int(request.form.get("units_3br"))
 
         unit_mix = {
             "0BR": units_0br,
@@ -78,12 +90,12 @@ def estimate():
         }
         units = units_0br + units_1br + units_2br + units_3br
 
-        elevator_count = int(request.form.get("elevator_count", "2"))
-        elevator_stops = int(request.form.get("elevator_stops", "7"))
+        elevator_count = _parse_int(request.form.get("elevator_count"), 2)
+        elevator_stops = _parse_int(request.form.get("elevator_stops"), 7)
 
-        gc_fee = float(request.form.get("gc_fee", "6.0"))
-        bonding = float(request.form.get("bonding", "1.0"))
-        admin = float(request.form.get("admin", "2.0"))
+        gc_fee = _parse_float(request.form.get("gc_fee"), 6.0)
+        bonding = _parse_float(request.form.get("bonding"), 1.0)
+        admin = _parse_float(request.form.get("admin"), 2.0)
 
         cost_codes = len(db.get_all_cost_codes())
 
