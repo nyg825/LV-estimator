@@ -29,14 +29,23 @@ DEFAULT_METHOD_WEIGHTS = {
 
 # Cost codes priced per UNIT (not per SF)
 UNIT_BASED_CODES = {
+    "50-1000-5000",  # Gypcrete
     "53-1000-2000",  # Kitchen & Bath Cabinets
     "53-1000-3000",  # Kitchen & Bath Countertops
+    "53-1000-4000",  # Closets and Shelving
+    "53-1000-6100",  # Vinyl Flooring
+    "57-1000-1000",  # Bathroom Accessories
+    "57-1000-3000",  # Bicycle Racks
+    "57-1000-5000",  # Mailboxes
     "58-1000-1000",  # Appliances
     "59-1000-2000",  # Window Coverings
     "62-1000-2000",  # Rough Plumbing
     "62-1000-2050",  # Water Heater
     "62-1000-3000",  # Fire Sprinkler
     "63-1000-1000",  # Electrical
+    "63-1000-2000",  # Fire Alarm System
+    "63-1000-3000",  # Phone, Data and TV Pre-Wire
+    "63-1000-8000",  # Light Fixtures
 }
 
 # HVAC rates by bedroom type

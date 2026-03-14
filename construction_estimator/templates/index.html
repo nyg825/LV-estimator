@@ -21,6 +21,14 @@
             <h2>Project Parameters</h2>
             <form method="POST" action="/estimate">
 
+                <!-- Project Name -->
+                <div class="form-group" style="margin-bottom:1.5rem;">
+                    <label for="project_name">Project Name</label>
+                    <input type="text" id="project_name" name="project_name"
+                           value="{{ form.project_name if form else '' }}"
+                           placeholder="e.g. Acama 1143" style="font-size:1.1rem; font-weight:600;">
+                </div>
+
                 <!-- Section A: Building Structure -->
                 <h3 class="section-header">A &mdash; Building Structure</h3>
                 <div class="form-grid-3">
@@ -167,7 +175,10 @@
                     </div>
                 </details>
 
-                <button type="submit" class="btn-estimate">Generate Estimate</button>
+                <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+                    <button type="submit" class="btn-estimate">Generate Estimate</button>
+                    <button type="submit" formaction="/download" class="btn-download">Download XLSX</button>
+                </div>
             </form>
         </section>
 
