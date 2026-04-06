@@ -2,10 +2,31 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "estimator",
+      "name": "assumptions-preview",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "construction_estimator.web"],
-      "port": 5000
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "/tmp/preview"],
+      "port": 8765
+    },
+    {
+      "name": "bd-site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["app.py"],
+      "port": 5002,
+      "cwd": "bd_site"
+    },
+    {
+      "name": "work-portal-api",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["wsgi.py"],
+      "port": 5001,
+      "cwd": "work_portal/backend"
+    },
+    {
+      "name": "work-portal-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "cwd": "work_portal/frontend"
     }
   ]
 }

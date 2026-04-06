@@ -6,3 +6,59 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn construction_estimator.web:app --bind 0.0.0.0:$PORT
     plan: free
+
+  - type: web
+    name: work-portal-api
+    runtime: python
+    pythonVersion: "3.11.11"
+    rootDir: work_portal/backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    plan: free
+    envVars:
+      - key: APP_SECRET_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: GMAIL_USER_EMAIL
+        sync: false
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: READAI_API_KEY
+        sync: false
+
+  - type: web
+    name: lv-bd-site
+    runtime: python
+    pythonVersion: "3.11.11"
+    rootDir: bd_site
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    plan: free
+
+  - type: web
+    name: work-portal-frontend
+    runtime: static
+    rootDir: work_portal/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_API_KEY
+        sync: false
