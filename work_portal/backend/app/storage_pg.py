@@ -34,7 +34,22 @@ class PostgresStorage:
     pool: ConnectionPool = field(init=False)
 
     def __post_init__(self) -> None:
-        self.pool = ConnectionPool(self.dsn, min_size=1, max_size=3, open=True)
+        # Neon free tier auto-suspends compute after inactivity. A warm pool
+        # would hold stale TCP connections that hang on first use. So:
+        #   - min_size=0: don't pre-warm connections
+        #   - max_idle=45: close idle conns before Neon suspends (~5 min default)
+        #   - check: validate each connection before handing it out (reconnect
+        #     transparently if Neon woke back up on a dead socket)
+        #   - timeout=10: fail fast rather than hang the request
+        self.pool = ConnectionPool(
+            self.dsn,
+            min_size=0,
+            max_size=3,
+            max_idle=45,
+            timeout=10,
+            check=ConnectionPool.check_connection,
+            open=True,
+        )
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_SQL)
