@@ -58,7 +58,12 @@ def _get_ingest_service() -> IngestService:
     readai_client = current_app.config.get("READAI_CLIENT")
     if readai_client is None and cfg.readai_api_key:
         readai_client = ReadAIClient(api_key=cfg.readai_api_key, base_url=cfg.readai_base_url)
-    return IngestService(storage=storage, summarizer=summarizer, readai=readai_client)
+    return IngestService(
+        storage=storage,
+        summarizer=summarizer,
+        readai=readai_client,
+        title_pattern=cfg.ingest_title_pattern,
+    )
 
 
 def require_api_key(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -159,8 +164,12 @@ def register_routes(app: Flask) -> None:
     @require_api_key
     def api_ingest_readai() -> Any:
         payload = request.get_json(silent=True) or {}
-        meeting = _get_ingest_service().ingest_webhook(payload)
-        return jsonify({"status": "ok", "meeting": meeting})
+        result = _get_ingest_service().ingest_webhook(payload)
+        # If the meeting was filtered out by title, return 200 so Read.ai
+        # doesn't treat it as a delivery failure and retry.
+        if isinstance(result, dict) and result.get("status") == "ignored":
+            return jsonify({"status": "ignored", "reason": result.get("reason", "")})
+        return jsonify({"status": "ok", "meeting": result})
 
     @app.route("/api/refresh", methods=["POST"])
     @require_api_key

@@ -173,6 +173,43 @@ def test_ingest_requires_api_key(client) -> None:
     assert resp.status_code == 401
 
 
+def test_ingest_filters_non_matching_titles(client, storage) -> None:
+    payload = {
+        "meeting": {
+            "id": "offtopic-1",
+            "title": "Internal Sales Call — Acme Corp",
+            "date": "2026-04-14",
+        }
+    }
+    resp = client.post(
+        "/api/ingest/readai", json=payload, headers={"X-API-Key": "test-key"}
+    )
+    # 200 so Read.ai doesn't retry; body signals ignored
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["status"] == "ignored"
+    assert body["reason"] == "title_filter"
+    # Not persisted
+    assert storage.get_meeting("offtopic-1") is None
+
+
+def test_ingest_accepts_matching_titles(client, storage) -> None:
+    payload = {
+        "meeting": {
+            "id": "l10-ok",
+            "title": "Weekly Six Peak Capital Call",
+            "start_time": "2026-04-14T15:00:00Z",
+            "transcript_text": "...",
+        }
+    }
+    resp = client.post(
+        "/api/ingest/readai", json=payload, headers={"X-API-Key": "test-key"}
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["status"] == "ok"
+    assert storage.get_meeting("l10-ok") is not None
+
+
 def test_refresh_pulls_from_readai(tmp_config) -> None:
     from app import create_app
 
