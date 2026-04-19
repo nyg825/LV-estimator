@@ -13,6 +13,7 @@ class Config:
     database_url: str = ""
     readai_base_url: str = "https://api.read.ai/v1"
     summarizer_model: str = "claude-haiku-4-5-20251001"
+    ingest_title_pattern: str = r"(?i)\bL10\b|Weekly Six Peak|Level 10|Leadership"
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -29,4 +30,8 @@ class Config:
             database_url=os.environ.get("DATABASE_URL", ""),
             readai_base_url=os.environ.get("READAI_BASE_URL", "https://api.read.ai/v1"),
             summarizer_model=os.environ.get("SUMMARIZER_MODEL", "claude-haiku-4-5-20251001"),
+            ingest_title_pattern=os.environ.get(
+                "INGEST_TITLE_PATTERN",
+                r"(?i)\bL10\b|Weekly Six Peak|Level 10|Leadership",
+            ),
         )
