@@ -5,7 +5,7 @@ from app.storage import Storage
 
 def test_load_rocks_default(storage: Storage) -> None:
     data = storage.load_rocks()
-    assert data == {"team": [], "rocks": {}, "company_rocks": []}
+    assert data == {"team": [], "rocks": {}, "company_rocks": [], "todos": []}
 
 
 def test_save_and_load_rocks(storage: Storage) -> None:

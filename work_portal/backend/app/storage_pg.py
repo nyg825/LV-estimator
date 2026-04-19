@@ -1,12 +1,4 @@
-"""Postgres-backed storage.
-
-Schema:
-  rocks_doc(id=1, data JSONB)          -- single row holding team/rocks/company_rocks
-  meetings(id TEXT PK, date DATE, data JSONB, saved_at TIMESTAMPTZ)
-
-Preserves the exact JSON shapes used by the JSON file storage, so the API
-layer doesn't care which backend is active.
-"""
+"""Postgres-backed storage (schema: rocks_doc + meetings, both JSONB)."""
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -16,7 +8,7 @@ import psycopg
 from psycopg.types.json import Json
 from psycopg_pool import ConnectionPool
 
-from .storage import ROCKS_SCHEMA_DEFAULT, STATUSES
+from .storage import ROCKS_SCHEMA_DEFAULT, STATUSES, _new_id
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS rocks_doc (
@@ -48,8 +40,6 @@ class PostgresStorage:
                 cur.execute(SCHEMA_SQL)
             conn.commit()
 
-    # --- Rocks ---
-
     def load_rocks(self) -> dict[str, Any]:
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
@@ -57,7 +47,10 @@ class PostgresStorage:
                 row = cur.fetchone()
         if row is None:
             return json.loads(json.dumps(ROCKS_SCHEMA_DEFAULT))
-        return row[0]
+        data = row[0]
+        data.setdefault("todos", [])
+        data.setdefault("company_rocks", [])
+        return data
 
     def save_rocks(self, data: dict[str, Any]) -> None:
         with self.pool.connection() as conn:
@@ -96,6 +89,31 @@ class PostgresStorage:
         self.save_rocks(data)
         return data
 
+    def add_person_rock(self, person: str, rock: dict[str, Any]) -> dict[str, Any]:
+        data = self.load_rocks()
+        rock = dict(rock)
+        rock.setdefault("id", _new_id("r"))
+        rock.setdefault("status", "incomplete")
+        if rock.get("status") not in STATUSES:
+            raise ValueError(f"invalid status: {rock['status']}")
+        data.setdefault("rocks", {}).setdefault(person, []).append(rock)
+        people = {p["name"] for p in data.get("team", [])}
+        if person not in people:
+            data.setdefault("team", []).append({"name": person, "role": rock.get("category", "")})
+        self.save_rocks(data)
+        return rock
+
+    def add_company_rock(self, rock: dict[str, Any]) -> dict[str, Any]:
+        data = self.load_rocks()
+        rock = dict(rock)
+        rock.setdefault("id", _new_id("cr"))
+        rock.setdefault("status", "incomplete")
+        if rock.get("status") not in STATUSES:
+            raise ValueError(f"invalid status: {rock['status']}")
+        data.setdefault("company_rocks", []).append(rock)
+        self.save_rocks(data)
+        return rock
+
     def toggle_rock(self, rock_id: str) -> dict[str, Any] | None:
         data = self.load_rocks()
         for rocks in (data.get("rocks") or {}).values():
@@ -111,7 +129,79 @@ class PostgresStorage:
                 return rock
         return None
 
-    # --- Meetings ---
+    def move_rock_to_todos(self, rock_id: str) -> dict[str, Any] | None:
+        data = self.load_rocks()
+        removed: dict[str, Any] | None = None
+        source_hint: dict[str, Any] | None = None
+        for person, rocks in (data.get("rocks") or {}).items():
+            for i, rock in enumerate(rocks):
+                if rock.get("id") == rock_id:
+                    removed = rocks.pop(i)
+                    source_hint = {"type": "rock", "rock_id": rock_id, "owner": person}
+                    break
+            if removed:
+                break
+        if removed is None:
+            for i, rock in enumerate(data.get("company_rocks") or []):
+                if rock.get("id") == rock_id:
+                    removed = data["company_rocks"].pop(i)
+                    source_hint = {"type": "company_rock", "rock_id": rock_id}
+                    break
+        if removed is None:
+            return None
+        todo = {
+            "id": _new_id("td"),
+            "owner": (source_hint or {}).get("owner", ""),
+            "task": removed.get("title", ""),
+            "due": removed.get("due", ""),
+            "completed": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "source": source_hint or {"type": "rock"},
+        }
+        data.setdefault("todos", []).append(todo)
+        self.save_rocks(data)
+        return todo
+
+    def list_todos(self) -> list[dict[str, Any]]:
+        return list(self.load_rocks().get("todos", []) or [])
+
+    def add_todo(self, todo: dict[str, Any]) -> dict[str, Any]:
+        data = self.load_rocks()
+        todo = dict(todo)
+        todo.setdefault("id", _new_id("td"))
+        todo.setdefault("completed", False)
+        todo.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+        todo.setdefault("source", {"type": "manual"})
+        data.setdefault("todos", []).append(todo)
+        self.save_rocks(data)
+        return todo
+
+    def toggle_todo(self, todo_id: str) -> dict[str, Any] | None:
+        data = self.load_rocks()
+        for t in data.get("todos", []) or []:
+            if t.get("id") == todo_id:
+                t["completed"] = not bool(t.get("completed"))
+                self.save_rocks(data)
+                return t
+        return None
+
+    def delete_todo(self, todo_id: str) -> bool:
+        data = self.load_rocks()
+        before = len(data.get("todos", []) or [])
+        data["todos"] = [t for t in (data.get("todos") or []) if t.get("id") != todo_id]
+        if len(data["todos"]) == before:
+            return False
+        self.save_rocks(data)
+        return True
+
+    def purge_completed_todos(self) -> int:
+        data = self.load_rocks()
+        before = len(data.get("todos", []) or [])
+        data["todos"] = [t for t in (data.get("todos") or []) if not t.get("completed")]
+        removed = before - len(data["todos"])
+        if removed:
+            self.save_rocks(data)
+        return removed
 
     def save_meeting(self, meeting: dict[str, Any]) -> dict[str, Any]:
         if "id" not in meeting or "date" not in meeting:
@@ -155,6 +245,52 @@ class PostgresStorage:
     def latest_meeting(self) -> dict[str, Any] | None:
         meetings = self.list_meetings(limit=1)
         return meetings[0] if meetings else None
+
+    def toggle_action_item(self, meeting_id: str, action_id: str) -> dict[str, Any] | None:
+        meeting = self.get_meeting(meeting_id)
+        if meeting is None:
+            return None
+        for item in meeting.get("action_items", []) or []:
+            if item.get("id") == action_id:
+                item["completed"] = not bool(item.get("completed"))
+                self.save_meeting(meeting)
+                return item
+        return None
+
+    def move_action_item_to_todos(self, meeting_id: str, action_id: str) -> dict[str, Any] | None:
+        meeting = self.get_meeting(meeting_id)
+        if meeting is None:
+            return None
+        items = meeting.get("action_items", []) or []
+        moved: dict[str, Any] | None = None
+        remaining: list[dict[str, Any]] = []
+        for item in items:
+            if moved is None and item.get("id") == action_id:
+                moved = item
+            else:
+                remaining.append(item)
+        if moved is None:
+            return None
+        meeting["action_items"] = remaining
+        self.save_meeting(meeting)
+        todo = {
+            "id": _new_id("td"),
+            "owner": moved.get("owner", ""),
+            "task": moved.get("task", ""),
+            "due": moved.get("due", ""),
+            "completed": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "source": {
+                "type": "action_item",
+                "meeting_id": meeting_id,
+                "action_id": action_id,
+                "meeting_title": meeting.get("title", ""),
+            },
+        }
+        data = self.load_rocks()
+        data.setdefault("todos", []).append(todo)
+        self.save_rocks(data)
+        return todo
 
     def close(self) -> None:
         self.pool.close()

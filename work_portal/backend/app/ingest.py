@@ -1,5 +1,6 @@
 """Ingestion pipeline: webhook payload or Read.ai pull -> storage."""
 import re
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -9,30 +10,32 @@ from .storage import Storage
 from .summarizer import Summarizer
 
 
+def _assign_action_item_ids(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in items or []:
+        item = dict(item)
+        item.setdefault("id", f"ai_{uuid.uuid4().hex[:10]}")
+        item.setdefault("completed", False)
+        out.append(item)
+    return out
+
+
 @dataclass
 class IngestService:
     storage: Storage
     summarizer: Summarizer
     readai: ReadAIClient | None = None
-    title_pattern: str = ""  # empty string = no filter (accept all)
+    title_pattern: str = ""
 
     def title_matches(self, title: str) -> bool:
-        """True if no pattern is configured, or the title matches the pattern."""
         if not self.title_pattern:
             return True
         try:
             return bool(re.search(self.title_pattern, title or ""))
         except re.error:
-            # invalid pattern: fail open so a bad env var doesn't drop real meetings
             return True
 
     def ingest_webhook(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Accept a Read.ai webhook payload (one meeting).
-
-        Returns a dict containing the stored meeting, or a sentinel dict with
-        status='ignored' if the meeting title doesn't match the configured
-        filter. Callers should still return 200 so Read.ai doesn't retry.
-        """
         meeting = payload.get("meeting") or payload
         normalized = _normalize(meeting)
         if not self.title_matches(normalized.get("title", "")):
@@ -40,7 +43,6 @@ class IngestService:
         return self._finalize(normalized)
 
     def refresh_from_readai(self) -> list[dict[str, Any]]:
-        """Pull meetings from Read.ai and persist any that are new."""
         if self.readai is None:
             raise RuntimeError("Read.ai client not configured")
         meetings = self.readai.list_recent_meetings()
@@ -64,8 +66,13 @@ class IngestService:
                 meeting["action_items"] = extracted.get("action_items", [])
             if not meeting.get("files"):
                 meeting["files"] = extracted.get("files", [])
+        meeting["action_items"] = _assign_action_item_ids(meeting.get("action_items") or [])
         meeting.setdefault("ingested_at", datetime.now(timezone.utc).isoformat())
         if not meeting.get("id"):
             meeting["id"] = meeting.get("date") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%S")
         self.storage.save_meeting(meeting)
+        try:
+            self.storage.purge_completed_todos()
+        except AttributeError:
+            pass
         return meeting

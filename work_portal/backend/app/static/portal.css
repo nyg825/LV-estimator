@@ -409,6 +409,189 @@ code {
     font-size: 0.88em;
 }
 
+/* Bulleted summary */
+.bullet-summary {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.bullet-summary li {
+    position: relative;
+    padding-left: 22px;
+    color: var(--denim);
+    line-height: 1.5;
+    font-size: 0.98rem;
+}
+.bullet-summary li::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--rust);
+}
+
+/* Action items with buttons */
+.action-item {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+}
+.action-item:last-child { border-bottom: none; }
+.action-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+.action-body .task {
+    color: var(--denim);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+.action-complete .action-body .task,
+.action-complete .action-body .owner {
+    text-decoration: line-through;
+    opacity: 0.55;
+}
+.action-right, .todo-right, .rock-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* Pill buttons */
+.pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    color: var(--gray-dark);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+.pill-btn:hover:not(:disabled) {
+    background: var(--steel-light);
+    color: var(--denim);
+    border-color: rgba(11, 24, 51, 0.18);
+}
+.pill-btn:disabled, .pill-btn.is-loading { opacity: 0.5; cursor: wait; }
+.pill-btn.danger {
+    color: #9B1C1C;
+    border-color: rgba(155, 28, 28, 0.2);
+}
+.pill-btn.danger:hover:not(:disabled) {
+    background: rgba(155, 28, 28, 0.08);
+    color: #7A1515;
+}
+.btn-primary.small {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+}
+
+/* Todos */
+.todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+    display: flex;
+    flex-direction: column;
+}
+.todo {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+}
+.todo:last-child { border-bottom: none; }
+.todo-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+.todo-body .task {
+    color: var(--denim);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+.todo-complete .todo-body .task,
+.todo-complete .todo-body .owner {
+    text-decoration: line-through;
+    opacity: 0.55;
+}
+.source-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    color: var(--gray-dark);
+    background: var(--steel-light);
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-top: 3px;
+    width: fit-content;
+    letter-spacing: 0.05em;
+}
+
+/* Add-form (inline) */
+.add-form {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 4px;
+    padding: 14px;
+    background: rgba(226, 231, 240, 0.55);
+    border-radius: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.add-form.hidden { display: none; }
+.add-form input[type="text"] {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    min-width: 150px;
+    flex: 1;
+    background: var(--white);
+}
+.add-form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--rust);
+    box-shadow: 0 0 0 2px rgba(196, 88, 26, 0.15);
+}
+.form-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.row-between {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 /* Footer */
 .site-footer {
     padding: 22px 0;

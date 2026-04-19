@@ -5,14 +5,13 @@ from flask import Flask, abort, current_app, jsonify, render_template, request
 
 from .ingest import IngestService
 from .readai import ReadAIClient
+from .storage import bullet_split
 from .summarizer import Summarizer
 
 
 def _group_by_category(rocks_data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Pivot rocks into [{name, owners: [{name, rocks}]}] ordered by team order."""
     team_names = [p["name"] for p in rocks_data.get("team", [])]
     rocks_map: dict[str, list[dict[str, Any]]] = rocks_data.get("rocks", {}) or {}
-    # Include any owner present in rocks_map but missing from team (edge case)
     for owner in rocks_map:
         if owner not in team_names:
             team_names.append(owner)
@@ -45,7 +44,6 @@ def _group_by_category(rocks_data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _get_storage():
-    """Return the singleton storage attached to the app (JSON or Postgres)."""
     return current_app.config["STORAGE"]
 
 
@@ -91,13 +89,16 @@ def register_routes(app: Flask) -> None:
         rocks_data = storage.load_rocks()
         latest = storage.latest_meeting()
         history = storage.list_meetings(limit=12)
+        summary_bullets = bullet_split(latest.get("summary", "")) if latest else []
         return render_template(
             "portal.html",
             team=rocks_data.get("team", []),
             rocks=rocks_data.get("rocks", {}),
             company_rocks=rocks_data.get("company_rocks", []),
             categorized=_group_by_category(rocks_data),
+            todos=rocks_data.get("todos", []),
             latest=latest,
+            summary_bullets=summary_bullets,
             history=history,
         )
 
@@ -107,17 +108,16 @@ def register_routes(app: Flask) -> None:
         meeting = storage.get_meeting(meeting_id)
         if not meeting:
             abort(404)
-        return render_template("meeting.html", meeting=meeting)
+        summary_bullets = bullet_split(meeting.get("summary", ""))
+        return render_template("meeting.html", meeting=meeting, summary_bullets=summary_bullets)
 
     @app.route("/api/meetings")
     def api_meetings() -> Any:
-        storage = _get_storage()
-        return jsonify({"meetings": storage.list_meetings(limit=20)})
+        return jsonify({"meetings": _get_storage().list_meetings(limit=20)})
 
     @app.route("/api/meetings/<meeting_id>")
     def api_meeting(meeting_id: str) -> Any:
-        storage = _get_storage()
-        meeting = storage.get_meeting(meeting_id)
+        meeting = _get_storage().get_meeting(meeting_id)
         if not meeting:
             abort(404)
         return jsonify(meeting)
@@ -147,6 +147,29 @@ def register_routes(app: Flask) -> None:
             abort(404, description="rock not found")
         return jsonify(rock)
 
+    @app.route("/api/rocks/<rock_id>/move", methods=["POST"])
+    @require_api_key
+    def api_rock_move(rock_id: str) -> Any:
+        todo = _get_storage().move_rock_to_todos(rock_id)
+        if todo is None:
+            abort(404)
+        return jsonify(todo)
+
+    @app.route("/api/rocks/<person>/add", methods=["POST"])
+    @require_api_key
+    def api_rock_add(person: str) -> Any:
+        body = request.get_json(silent=True) or {}
+        title = (body.get("title") or "").strip()
+        if not title:
+            abort(400, description="'title' is required")
+        rock = _get_storage().add_person_rock(person, {
+            "title": title,
+            "notes": (body.get("notes") or "").strip(),
+            "due": (body.get("due") or "").strip(),
+            "category": (body.get("category") or "").strip(),
+        })
+        return jsonify(rock)
+
     @app.route("/api/company_rocks", methods=["PUT"])
     @require_api_key
     def api_update_company_rocks() -> Any:
@@ -160,13 +183,74 @@ def register_routes(app: Flask) -> None:
             abort(400, description=str(exc))
         return jsonify(data)
 
+    @app.route("/api/company_rocks/add", methods=["POST"])
+    @require_api_key
+    def api_company_rock_add() -> Any:
+        body = request.get_json(silent=True) or {}
+        title = (body.get("title") or "").strip()
+        if not title:
+            abort(400, description="'title' is required")
+        rock = _get_storage().add_company_rock({
+            "title": title,
+            "notes": (body.get("notes") or "").strip(),
+            "due": (body.get("due") or "").strip(),
+        })
+        return jsonify(rock)
+
+    @app.route("/api/todos")
+    def api_todos() -> Any:
+        return jsonify({"todos": _get_storage().list_todos()})
+
+    @app.route("/api/todos", methods=["POST"])
+    @require_api_key
+    def api_todos_add() -> Any:
+        body = request.get_json(silent=True) or {}
+        task = (body.get("task") or "").strip()
+        if not task:
+            abort(400, description="'task' is required")
+        todo = _get_storage().add_todo({
+            "owner": (body.get("owner") or "").strip(),
+            "task": task,
+            "due": (body.get("due") or "").strip(),
+        })
+        return jsonify(todo)
+
+    @app.route("/api/todos/<todo_id>/toggle", methods=["POST"])
+    @require_api_key
+    def api_todo_toggle(todo_id: str) -> Any:
+        todo = _get_storage().toggle_todo(todo_id)
+        if todo is None:
+            abort(404)
+        return jsonify(todo)
+
+    @app.route("/api/todos/<todo_id>", methods=["DELETE"])
+    @require_api_key
+    def api_todo_delete(todo_id: str) -> Any:
+        if not _get_storage().delete_todo(todo_id):
+            abort(404)
+        return jsonify({"status": "deleted", "id": todo_id})
+
+    @app.route("/api/action/<meeting_id>/<action_id>/toggle", methods=["POST"])
+    @require_api_key
+    def api_action_toggle(meeting_id: str, action_id: str) -> Any:
+        item = _get_storage().toggle_action_item(meeting_id, action_id)
+        if item is None:
+            abort(404)
+        return jsonify(item)
+
+    @app.route("/api/action/<meeting_id>/<action_id>/move", methods=["POST"])
+    @require_api_key
+    def api_action_move(meeting_id: str, action_id: str) -> Any:
+        todo = _get_storage().move_action_item_to_todos(meeting_id, action_id)
+        if todo is None:
+            abort(404)
+        return jsonify(todo)
+
     @app.route("/api/ingest/readai", methods=["POST"])
     @require_api_key
     def api_ingest_readai() -> Any:
         payload = request.get_json(silent=True) or {}
         result = _get_ingest_service().ingest_webhook(payload)
-        # If the meeting was filtered out by title, return 200 so Read.ai
-        # doesn't treat it as a delivery failure and retry.
         if isinstance(result, dict) and result.get("status") == "ignored":
             return jsonify({"status": "ignored", "reason": result.get("reason", "")})
         return jsonify({"status": "ok", "meeting": result})

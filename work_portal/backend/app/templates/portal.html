@@ -14,7 +14,28 @@
         </div>
         {% if rock.notes %}<div class="rock-notes">{{ rock.notes }}</div>{% endif %}
     </div>
-    {% if rock.due %}<span class="rock-due">{{ rock.due }}</span>{% endif %}
+    <div class="rock-right">
+        {% if rock.due %}<span class="rock-due">{{ rock.due }}</span>{% endif %}
+        <button type="button" class="pill-btn move-rock-btn" data-rock-id="{{ rock.id }}"
+                title="Move to To-Dos">→ To-Dos</button>
+    </div>
+</li>
+{%- endmacro %}
+
+{% macro action_row(item, meeting_id) -%}
+<li class="action-item action-{{ 'complete' if item.completed else 'incomplete' }}" data-action-id="{{ item.id }}">
+    <button type="button" class="check" data-action-id="{{ item.id }}" data-meeting-id="{{ meeting_id }}"
+            aria-label="Toggle complete"
+            title="Click to toggle complete">{% if item.completed %}✓{% else %}◻{% endif %}</button>
+    <div class="action-body">
+        <span class="owner">{{ item.owner or "Unassigned" }}</span>
+        <span class="task">{{ item.task }}</span>
+    </div>
+    <div class="action-right">
+        {% if item.due %}<span class="due">due {{ item.due }}</span>{% endif %}
+        <button type="button" class="pill-btn move-action-btn" data-action-id="{{ item.id }}" data-meeting-id="{{ meeting_id }}"
+                title="Move to To-Dos">→ To-Dos</button>
+    </div>
 </li>
 {%- endmacro %}
 
@@ -30,62 +51,131 @@
     <div class="divider"></div>
 </section>
 
+{% if latest %}
 <section class="card">
     <div class="card-head">
         <span class="section-label">Weekly Summary</span>
-        <h2>{% if latest %}{{ latest.date }} — {{ latest.title }}{% else %}—{% endif %}</h2>
+        <h2>{{ latest.date }} — {{ latest.title }}</h2>
     </div>
-    {% if latest %}
-        {% if latest.summary %}<p class="lede">{{ latest.summary }}</p>{% endif %}
-        <div class="two-col">
-            <div>
-                <h3 class="sub-head">Action Items</h3>
-                {% if latest.action_items %}
-                <ul class="action-list">
-                    {% for item in latest.action_items %}
-                    <li>
-                        <span class="owner">{{ item.owner or "Unassigned" }}</span>
-                        <span class="task">{{ item.task }}</span>
-                        {% if item.due %}<span class="due">due {{ item.due }}</span>{% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}<p class="muted">No action items extracted.</p>{% endif %}
-            </div>
-            <div>
-                <h3 class="sub-head">Files Referenced</h3>
-                {% if latest.files %}
-                <ul class="files-list">
-                    {% for f in latest.files %}
-                    <li>
-                        {% if f.url %}<a href="{{ f.url }}">{{ f.name }}</a>{% else %}<span>{{ f.name }}</span>{% endif %}
-                        {% if f.note %}<span class="file-note">— {{ f.note }}</span>{% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}<p class="muted">No files referenced.</p>{% endif %}
-            </div>
-        </div>
-        {% if latest.source_url %}
-        <p class="source"><a href="{{ latest.source_url }}" target="_blank" rel="noopener">Open in Read.ai →</a></p>
-        {% endif %}
+    {% if summary_bullets %}
+    <ul class="bullet-summary">
+        {% for b in summary_bullets %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% elif latest.summary %}
+    <p class="lede">{{ latest.summary }}</p>
     {% else %}
-        <p class="muted">Waiting for the first ingest.</p>
+    <p class="muted">No summary available.</p>
+    {% endif %}
+    {% if latest.source_url %}
+    <p class="source"><a href="{{ latest.source_url }}" target="_blank" rel="noopener">Open in Read.ai →</a></p>
+    {% endif %}
+</section>
+
+<section class="card">
+    <div class="card-head">
+        <span class="section-label">Action Items</span>
+        <h2>From {{ latest.date }}</h2>
+    </div>
+    {% if latest.action_items %}
+    <ul class="action-list">
+        {% for item in latest.action_items %}{{ action_row(item, latest.id) }}{% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No action items remaining.</p>
+    {% endif %}
+</section>
+
+<section class="card">
+    <div class="card-head">
+        <span class="section-label">Files Referenced</span>
+        <h2>Needed to keep moving</h2>
+    </div>
+    {% if latest.files %}
+    <ul class="files-list">
+        {% for f in latest.files %}
+        <li>
+            {% if f.url %}<a href="{{ f.url }}">{{ f.name }}</a>{% else %}<span>{{ f.name }}</span>{% endif %}
+            {% if f.note %}<span class="file-note">— {{ f.note }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No files referenced.</p>
+    {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+    <div class="card-head row-between">
+        <div>
+            <span class="section-label">To-Dos</span>
+            <h2>Active this week</h2>
+        </div>
+        <button type="button" class="btn-primary small" id="add-todo-open">+ Add To-Do</button>
+    </div>
+
+    <form class="add-form hidden" id="add-todo-form" autocomplete="off">
+        <input type="text" name="owner" placeholder="Owner" />
+        <input type="text" name="task" placeholder="Task (required)" required />
+        <input type="text" name="due" placeholder="Due (e.g. 2026-04-25)" />
+        <div class="form-actions">
+            <button type="submit" class="btn-primary small">Save</button>
+            <button type="button" class="pill-btn" id="add-todo-cancel">Cancel</button>
+        </div>
+    </form>
+
+    {% if todos %}
+    <ul class="todo-list">
+        {% for t in todos %}
+        <li class="todo todo-{{ 'complete' if t.completed else 'incomplete' }}" data-todo-id="{{ t.id }}">
+            <button type="button" class="check" data-todo-id="{{ t.id }}"
+                    aria-label="Toggle complete"
+                    title="Click to toggle complete">{% if t.completed %}✓{% else %}◻{% endif %}</button>
+            <div class="todo-body">
+                {% if t.owner %}<span class="owner">{{ t.owner }}</span>{% endif %}
+                <span class="task">{{ t.task }}</span>
+                {% if t.source and t.source.type and t.source.type != 'manual' %}
+                <span class="source-tag" title="{{ t.source.type }}">from {{ t.source.type.replace('_', ' ') }}</span>
+                {% endif %}
+            </div>
+            <div class="todo-right">
+                {% if t.due %}<span class="due">{{ t.due }}</span>{% endif %}
+                <button type="button" class="pill-btn danger delete-todo-btn" data-todo-id="{{ t.id }}" title="Delete">×</button>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No to-dos yet. Move action items or rocks here, or click + Add To-Do.</p>
     {% endif %}
 </section>
 
 <section class="rocks-section">
-    <div class="section-heading">
-        <span class="section-label">Company Rocks</span>
-        <h2>Shared quarterly goals</h2>
+    <div class="section-heading row-between">
+        <div>
+            <span class="section-label">Company Rocks</span>
+            <h2>Shared quarterly goals</h2>
+        </div>
+        <button type="button" class="btn-primary small" id="add-company-rock-open">+ Add Company Rock</button>
     </div>
+
+    <form class="add-form hidden" id="add-company-rock-form" autocomplete="off">
+        <input type="text" name="title" placeholder="Title (required)" required />
+        <input type="text" name="notes" placeholder="Notes" />
+        <input type="text" name="due" placeholder="Due" />
+        <div class="form-actions">
+            <button type="submit" class="btn-primary small">Save</button>
+            <button type="button" class="pill-btn" id="add-company-rock-cancel">Cancel</button>
+        </div>
+    </form>
+
     <div class="card">
         {% if company_rocks %}
         <ul class="rocks-list">
             {% for rock in company_rocks %}{{ rock_row(rock) }}{% endfor %}
         </ul>
         {% else %}
-        <p class="muted">No company rocks set. Add via <code>PUT /api/company_rocks</code>.</p>
+        <p class="muted">No company rocks set.</p>
         {% endif %}
     </div>
 </section>
@@ -108,11 +198,23 @@
             <div class="people-grid">
                 {% for o in cat.owners %}
                 {% set done = o.rocks | selectattr('status', 'equalto', 'complete') | list | length %}
-                <div class="card person-card">
-                    <div class="person-head">
-                        <strong>{{ o.name }}</strong>
-                        <span class="person-count">{{ done }} / {{ o.rocks|length }}</span>
+                <div class="card person-card" data-owner="{{ o.name }}" data-category="{{ cat.name }}">
+                    <div class="person-head row-between">
+                        <div>
+                            <strong>{{ o.name }}</strong>
+                            <span class="person-count">{{ done }} / {{ o.rocks|length }}</span>
+                        </div>
+                        <button type="button" class="pill-btn add-rock-btn" data-owner="{{ o.name }}" data-category="{{ cat.name }}">+ Add Rock</button>
                     </div>
+                    <form class="add-form add-rock-form hidden" data-owner="{{ o.name }}" data-category="{{ cat.name }}" autocomplete="off">
+                        <input type="text" name="title" placeholder="Title (required)" required />
+                        <input type="text" name="notes" placeholder="Notes" />
+                        <input type="text" name="due" placeholder="Due" />
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary small">Save</button>
+                            <button type="button" class="pill-btn cancel-add-rock">Cancel</button>
+                        </div>
+                    </form>
                     <ul class="rocks-list">
                         {% for rock in o.rocks %}{{ rock_row(rock) }}{% endfor %}
                     </ul>
@@ -122,7 +224,7 @@
         </div>
         {% endfor %}
     {% else %}
-    <div class="card"><p class="muted">No individual rocks yet. Add via <code>PUT /api/rocks/&lt;person&gt;</code>.</p></div>
+    <div class="card"><p class="muted">No individual rocks yet.</p></div>
     {% endif %}
 </section>
 
