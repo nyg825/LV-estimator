@@ -143,6 +143,21 @@ class PostgresStorage:
                 return rock
         return None
 
+    def delete_rock(self, rock_id: str) -> bool:
+        data = self.load_rocks()
+        for rocks in (data.get("rocks") or {}).values():
+            for i, rock in enumerate(rocks):
+                if rock.get("id") == rock_id:
+                    rocks.pop(i)
+                    self.save_rocks(data)
+                    return True
+        for i, rock in enumerate(data.get("company_rocks") or []):
+            if rock.get("id") == rock_id:
+                data["company_rocks"].pop(i)
+                self.save_rocks(data)
+                return True
+        return False
+
     def move_rock_to_todos(self, rock_id: str) -> dict[str, Any] | None:
         data = self.load_rocks()
         removed: dict[str, Any] | None = None

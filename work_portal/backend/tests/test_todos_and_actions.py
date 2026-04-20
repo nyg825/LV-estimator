@@ -155,6 +155,37 @@ def test_move_rock_missing(storage: Storage):
     assert storage.move_rock_to_todos("nope") is None
 
 
+def test_delete_rock_person(storage: Storage):
+    storage.set_person_rocks("Chris", [
+        {"id": "r1", "title": "keep", "status": "incomplete"},
+        {"id": "r2", "title": "delete me", "status": "incomplete"},
+    ])
+    assert storage.delete_rock("r2") is True
+    remaining = storage.load_rocks()["rocks"]["Chris"]
+    assert len(remaining) == 1 and remaining[0]["id"] == "r1"
+
+
+def test_delete_company_rock(storage: Storage):
+    storage.set_company_rocks([{"id": "c1", "title": "x", "status": "incomplete"}])
+    assert storage.delete_rock("c1") is True
+    assert storage.load_rocks()["company_rocks"] == []
+
+
+def test_delete_rock_missing(storage: Storage):
+    assert storage.delete_rock("nope") is False
+
+
+def test_api_rock_delete(client, storage):
+    storage.set_person_rocks("Chris", [{"id": "r1", "title": "t", "status": "incomplete"}])
+    r = client.delete("/api/rocks/r1")
+    assert r.status_code == 200
+    assert storage.load_rocks()["rocks"]["Chris"] == []
+
+
+def test_api_rock_delete_missing(client):
+    assert client.delete("/api/rocks/nope").status_code == 404
+
+
 # --- Route tests ---
 
 def test_api_todos_list(client, storage):

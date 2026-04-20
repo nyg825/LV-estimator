@@ -18,6 +18,8 @@
         {% if rock.due %}<span class="rock-due">{{ rock.due }}</span>{% endif %}
         <button type="button" class="pill-btn move-rock-btn" data-rock-id="{{ rock.id }}"
                 title="Move to To-Dos">→ To-Dos</button>
+        <button type="button" class="pill-btn danger delete-rock-btn" data-rock-id="{{ rock.id }}"
+                title="Delete rock">×</button>
     </div>
 </li>
 {%- endmacro %}

@@ -40,6 +40,16 @@
         });
     }
 
+    function wireDeleteRock() {
+        document.querySelectorAll(".delete-rock-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                if (!confirm("Delete this rock? This cannot be undone.")) return;
+                const id = btn.dataset.rockId;
+                handleAction(btn, () => apiRequest(`/api/rocks/${encodeURIComponent(id)}`, { method: "DELETE" }));
+            });
+        });
+    }
+
     function wireToggleAction() {
         document.querySelectorAll("button.check[data-action-id]").forEach(function (btn) {
             btn.addEventListener("click", function () {
@@ -170,6 +180,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         wireToggleRock();
         wireMoveRock();
+        wireDeleteRock();
         wireToggleAction();
         wireMoveAction();
         wireToggleTodo();

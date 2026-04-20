@@ -145,6 +145,12 @@ def register_routes(app: Flask) -> None:
             abort(404, description="rock not found")
         return jsonify(rock)
 
+    @app.route("/api/rocks/<rock_id>", methods=["DELETE"])
+    def api_rock_delete(rock_id: str) -> Any:
+        if not _get_storage().delete_rock(rock_id):
+            abort(404)
+        return jsonify({"status": "deleted", "id": rock_id})
+
     @app.route("/api/rocks/<rock_id>/move", methods=["POST"])
     def api_rock_move(rock_id: str) -> Any:
         todo = _get_storage().move_rock_to_todos(rock_id)
