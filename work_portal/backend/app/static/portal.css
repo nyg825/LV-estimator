@@ -20,8 +20,8 @@
 html, body {
     margin: 0;
     padding: 0;
-    background: var(--steel-light);
-    color: var(--gray-dark);
+    background: var(--denim);
+    color: var(--steel);
     font-family: var(--font-body);
     font-size: 15px;
     line-height: 1.55;
@@ -35,8 +35,8 @@ html, body {
 
 /* Header */
 .site-header {
-    background: var(--denim);
-    color: var(--white);
+    background: var(--steel-light);
+    color: var(--denim);
     border-bottom: 2px solid var(--rust);
 }
 .site-header .wrap {
@@ -58,23 +58,23 @@ html, body {
     font-family: var(--font-display);
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--white);
+    color: var(--denim);
     letter-spacing: -0.01em;
 }
 .brand-date {
     font-family: var(--font-body);
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--steel);
+    color: var(--gray-dark);
     letter-spacing: 0.02em;
 }
 .top-nav a {
-    color: var(--steel);
+    color: var(--gray-dark);
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 500;
 }
-.top-nav a:hover { color: var(--white); }
+.top-nav a:hover { color: var(--rust); }
 
 /* Main */
 .main-content {
@@ -91,16 +91,16 @@ html, body {
     font-family: var(--font-display);
     font-size: 2.4rem;
     font-weight: 700;
-    color: var(--denim);
+    color: var(--white);
     margin: 6px 0 8px;
     letter-spacing: -0.02em;
 }
 .hero-sub {
     font-size: 1.05rem;
-    color: var(--gray-dark);
+    color: var(--steel);
     margin: 0;
 }
-.hero-sub strong { color: var(--denim); }
+.hero-sub strong { color: var(--white); }
 .section-label {
     display: inline-block;
     font-size: 0.7rem;
@@ -123,7 +123,7 @@ html, body {
     font-family: var(--font-display);
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--denim);
+    color: var(--white);
     margin: 4px 0 0;
     letter-spacing: -0.01em;
 }
@@ -252,7 +252,7 @@ html, body {
     font-family: var(--font-display);
     font-size: 1.15rem;
     font-weight: 600;
-    color: var(--denim);
+    color: var(--white);
     margin: 0;
     letter-spacing: -0.01em;
 }
@@ -587,9 +587,9 @@ code {
 /* Footer */
 .site-footer {
     padding: 22px 0;
-    color: var(--gray-dark);
+    color: var(--steel);
     font-size: 0.82rem;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid rgba(191, 199, 218, 0.12);
 }
 .site-footer .wrap {
     display: flex;
