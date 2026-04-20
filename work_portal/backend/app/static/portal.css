@@ -272,9 +272,9 @@ html, body {
     letter-spacing: 0.02em;
 }
 .people-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 .person-card { padding: 20px 22px; }
 .person-head {

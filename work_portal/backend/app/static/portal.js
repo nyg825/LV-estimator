@@ -1,34 +1,9 @@
 (function () {
-    const KEY_STORAGE = "l10_api_key";
-
-    function getKey(forcePrompt) {
-        let k = localStorage.getItem(KEY_STORAGE);
-        if (!k || forcePrompt) {
-            k = window.prompt("Enter portal API key:");
-            if (k) localStorage.setItem(KEY_STORAGE, k);
-        }
-        return k;
-    }
-
-    function resetKey() {
-        localStorage.removeItem(KEY_STORAGE);
-    }
-
     async function apiRequest(path, options) {
         options = options || {};
-        let key = getKey(false);
-        if (!key) throw new Error("API key required");
-        const headers = Object.assign({ "X-API-Key": key }, options.headers || {});
+        const headers = Object.assign({}, options.headers || {});
         if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
-        let res = await fetch(path, Object.assign({}, options, { headers }));
-        if (res.status === 401) {
-            resetKey();
-            const retry = getKey(true);
-            if (!retry) throw new Error("API key required");
-            const headers2 = Object.assign({ "X-API-Key": retry }, options.headers || {});
-            if (options.body && !headers2["Content-Type"]) headers2["Content-Type"] = "application/json";
-            res = await fetch(path, Object.assign({}, options, { headers: headers2 }));
-        }
+        const res = await fetch(path, Object.assign({}, options, { headers }));
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res;
     }
@@ -192,16 +167,6 @@
         });
     }
 
-    function wireResetKey() {
-        const resetBtn = document.getElementById("reset-key-btn");
-        if (resetBtn) {
-            resetBtn.addEventListener("click", function () {
-                resetKey();
-                alert("Portal API key cleared — you'll be asked again on next action.");
-            });
-        }
-    }
-
     document.addEventListener("DOMContentLoaded", function () {
         wireToggleRock();
         wireMoveRock();
@@ -212,6 +177,5 @@
         wireAddTodo();
         wireAddCompanyRock();
         wireAddPersonRock();
-        wireResetKey();
     });
 })();

@@ -127,7 +127,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(_get_storage().load_rocks())
 
     @app.route("/api/rocks/<person>", methods=["PUT"])
-    @require_api_key
     def api_update_rocks(person: str) -> Any:
         body = request.get_json(silent=True) or {}
         rocks = body.get("rocks")
@@ -140,7 +139,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(data)
 
     @app.route("/api/rocks/<rock_id>/toggle", methods=["POST"])
-    @require_api_key
     def api_toggle_rock(rock_id: str) -> Any:
         rock = _get_storage().toggle_rock(rock_id)
         if rock is None:
@@ -148,7 +146,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(rock)
 
     @app.route("/api/rocks/<rock_id>/move", methods=["POST"])
-    @require_api_key
     def api_rock_move(rock_id: str) -> Any:
         todo = _get_storage().move_rock_to_todos(rock_id)
         if todo is None:
@@ -156,7 +153,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(todo)
 
     @app.route("/api/rocks/<person>/add", methods=["POST"])
-    @require_api_key
     def api_rock_add(person: str) -> Any:
         body = request.get_json(silent=True) or {}
         title = (body.get("title") or "").strip()
@@ -171,7 +167,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(rock)
 
     @app.route("/api/company_rocks", methods=["PUT"])
-    @require_api_key
     def api_update_company_rocks() -> Any:
         body = request.get_json(silent=True) or {}
         rocks = body.get("rocks")
@@ -184,7 +179,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(data)
 
     @app.route("/api/company_rocks/add", methods=["POST"])
-    @require_api_key
     def api_company_rock_add() -> Any:
         body = request.get_json(silent=True) or {}
         title = (body.get("title") or "").strip()
@@ -202,7 +196,6 @@ def register_routes(app: Flask) -> None:
         return jsonify({"todos": _get_storage().list_todos()})
 
     @app.route("/api/todos", methods=["POST"])
-    @require_api_key
     def api_todos_add() -> Any:
         body = request.get_json(silent=True) or {}
         task = (body.get("task") or "").strip()
@@ -216,7 +209,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(todo)
 
     @app.route("/api/todos/<todo_id>/toggle", methods=["POST"])
-    @require_api_key
     def api_todo_toggle(todo_id: str) -> Any:
         todo = _get_storage().toggle_todo(todo_id)
         if todo is None:
@@ -224,14 +216,12 @@ def register_routes(app: Flask) -> None:
         return jsonify(todo)
 
     @app.route("/api/todos/<todo_id>", methods=["DELETE"])
-    @require_api_key
     def api_todo_delete(todo_id: str) -> Any:
         if not _get_storage().delete_todo(todo_id):
             abort(404)
         return jsonify({"status": "deleted", "id": todo_id})
 
     @app.route("/api/action/<meeting_id>/<action_id>/toggle", methods=["POST"])
-    @require_api_key
     def api_action_toggle(meeting_id: str, action_id: str) -> Any:
         item = _get_storage().toggle_action_item(meeting_id, action_id)
         if item is None:
@@ -239,7 +229,6 @@ def register_routes(app: Flask) -> None:
         return jsonify(item)
 
     @app.route("/api/action/<meeting_id>/<action_id>/move", methods=["POST"])
-    @require_api_key
     def api_action_move(meeting_id: str, action_id: str) -> Any:
         todo = _get_storage().move_action_item_to_todos(meeting_id, action_id)
         if todo is None:

@@ -162,11 +162,6 @@ def test_api_todos_list(client, storage):
     assert client.get("/api/todos").get_json()["todos"][0]["task"] == "one"
 
 
-def test_api_add_todo_requires_key(client):
-    r = client.post("/api/todos", json={"task": "x"})
-    assert r.status_code == 401
-
-
 def test_api_add_todo_happy(client, storage):
     r = client.post("/api/todos", json={"task": "Do thing", "owner": "Chris"},
                     headers={"X-API-Key": "test-key"})

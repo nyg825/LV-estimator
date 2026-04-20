@@ -53,11 +53,6 @@ def test_api_rocks_json(client, storage: Storage) -> None:
     assert data["rocks"]["Chris"][0]["title"] == "t"
 
 
-def test_api_update_rocks_requires_key(client) -> None:
-    resp = client.put("/api/rocks/Chris", json={"rocks": []})
-    assert resp.status_code == 401
-
-
 def test_api_update_rocks_happy(client) -> None:
     resp = client.put(
         "/api/rocks/Chris",
@@ -66,11 +61,6 @@ def test_api_update_rocks_happy(client) -> None:
     )
     assert resp.status_code == 200
     assert resp.get_json()["rocks"]["Chris"][0]["title"] == "ship"
-
-
-def test_api_update_company_rocks_requires_key(client) -> None:
-    resp = client.put("/api/company_rocks", json={"rocks": []})
-    assert resp.status_code == 401
 
 
 def test_api_update_company_rocks_happy(client) -> None:
@@ -84,11 +74,6 @@ def test_api_update_company_rocks_happy(client) -> None:
     )
     assert resp.status_code == 200
     assert resp.get_json()["company_rocks"][0]["title"] == "Hit $10M AUM"
-
-
-def test_api_toggle_rock_requires_key(client) -> None:
-    resp = client.post("/api/rocks/r1/toggle")
-    assert resp.status_code == 401
 
 
 def test_api_toggle_rock_happy(client, storage: Storage) -> None:
