@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Six Peak Capital</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --denim: #0B1833;
+            --steel-light: #E2E7F0;
+            --rust: #C4581A;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            height: 100%;
+            background: var(--steel-light);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--denim);
+        }
+        .page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+        .logos {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 64px;
+            flex-wrap: wrap;
+        }
+        .logos img {
+            height: 120px;
+            width: auto;
+            display: block;
+        }
+        .divider {
+            width: 1px;
+            height: 96px;
+            background: var(--denim);
+            opacity: 0.15;
+        }
+        @media (max-width: 600px) {
+            .logos { gap: 32px; }
+            .logos img { height: 80px; }
+            .divider { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <div class="logos">
+            <img src="{{ url_for('static', filename='images/six-peak-logo.webp') }}" alt="Six Peak Capital" />
+            <span class="divider" aria-hidden="true"></span>
+            <img src="{{ url_for('static', filename='images/lv-llc-logo.jpg') }}" alt="LV Construction" />
+        </div>
+    </main>
+</body>
+</html>

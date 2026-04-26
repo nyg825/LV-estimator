@@ -27,6 +27,13 @@
       "runtimeArgs": ["run", "dev"],
       "port": 5173,
       "cwd": "work_portal/frontend"
+    },
+    {
+      "name": "sixpeakapps",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["app.py"],
+      "port": 5003,
+      "cwd": "sixpeakapps"
     }
   ]
 }
