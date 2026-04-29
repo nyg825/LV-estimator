@@ -160,6 +160,43 @@ def test_ingest_webhook_accepts_lv(client, storage: Storage):
     assert m["action_items"][0]["id"].startswith("ai_")
 
 
+def test_ingest_maps_readai_text_to_task(client, storage: Storage):
+    """Read.ai sends action items as {id, text, completed}; ingest should populate task."""
+    payload = {"meeting": {
+        "id": "rai1", "title": "LV Construction Executive",
+        "start_time": "2026-04-28T15:00:00Z",
+        "summary": "s",
+        "action_items": [
+            {"id": "ai_1", "text": "Tom will obtain proposals", "completed": False},
+        ],
+    }}
+    r = client.post("/api/ingest/readai", json=payload, headers={"X-API-Key": "test-key"})
+    assert r.status_code == 200
+    m = storage.get_meeting("rai1")
+    assert m["action_items"][0]["task"] == "Tom will obtain proposals"
+
+
+def test_portal_renders_text_only_action_items(client, storage: Storage):
+    storage.save_meeting({
+        "id": "legacy", "date": "2026-04-28", "title": "LV Exec",
+        "summary": "",
+        "action_items": [{"id": "ai_1", "text": "Bob will finalize EOS", "completed": False}],
+    })
+    body = client.get("/").data.decode()
+    assert "Bob will finalize EOS" in body
+
+
+def test_move_text_only_action_to_todos_carries_text(client, storage: Storage):
+    storage.save_meeting({
+        "id": "m1", "date": "2026-04-28",
+        "action_items": [{"id": "ai_1", "text": "Send the report", "completed": False}],
+    })
+    r = client.post("/api/action/m1/ai_1/move")
+    assert r.status_code == 200
+    todos = storage.list_todos()
+    assert len(todos) == 1 and todos[0]["task"] == "Send the report"
+
+
 def test_ingest_purges_completed_todos(client, storage: Storage):
     t = storage.add_todo({"task": "old"})
     storage.toggle_todo(t["id"])  # mark complete

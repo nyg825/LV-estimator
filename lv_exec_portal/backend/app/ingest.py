@@ -11,11 +11,20 @@ from .summarizer import Summarizer
 
 
 def _assign_action_item_ids(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Normalize action items at ingest time.
+
+    Read.ai sends action items as ``{id, text, completed}`` (one sentence per
+    item, owner baked in). Our internal shape is ``{id, owner, task, due,
+    completed}``. Map ``text`` -> ``task`` so the rest of the app can rely
+    on a stable schema.
+    """
     out: list[dict[str, Any]] = []
     for item in items or []:
         item = dict(item)
         item.setdefault("id", f"ai_{uuid.uuid4().hex[:10]}")
         item.setdefault("completed", False)
+        if not item.get("task") and item.get("text"):
+            item["task"] = item["text"]
         out.append(item)
     return out
 

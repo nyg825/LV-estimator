@@ -322,7 +322,7 @@ class PostgresStorage:
         todo = {
             "id": _new_id("td"),
             "owner": moved.get("owner", ""),
-            "task": moved.get("task", ""),
+            "task": moved.get("task") or moved.get("text") or "",
             "due": moved.get("due", ""),
             "completed": False,
             "created_at": datetime.now(timezone.utc).isoformat(),

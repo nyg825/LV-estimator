@@ -39,7 +39,7 @@
             title="Click to toggle complete">{% if item.completed %}✓{% else %}◻{% endif %}</button>
     <div class="action-body">
         <span class="owner">{{ item.owner or "Unassigned" }}</span>
-        <span class="task">{{ item.task }}</span>
+        <span class="task">{{ item.task or item.text or "" }}</span>
     </div>
     <div class="action-right">
         {% if item.due %}<span class="due">due {{ item.due }}</span>{% endif %}
