@@ -227,6 +227,67 @@ def test_api_rock_update_missing(client):
     assert client.patch("/api/rocks/nope", json={"title": "x"}).status_code == 404
 
 
+# --- Read.ai 'text' field handling on action items ---
+
+def test_ingest_maps_text_field_to_task(client, storage):
+    """Read.ai sends action items as {id, text, completed}; ingest should populate task."""
+    payload = {"meeting": {
+        "id": "rai1", "title": "L10 Apr",
+        "start_time": "2026-04-28T15:00:00Z",
+        "summary": "s",
+        "action_items": [
+            {"id": "ai_1", "text": "Chris will fix the thing", "completed": False},
+            {"id": "ai_2", "text": "Bob will ship the GMP", "completed": False},
+        ],
+    }}
+    r = client.post("/api/ingest/readai", json=payload, headers={"X-API-Key": "test-key"})
+    assert r.status_code == 200
+    m = storage.get_meeting("rai1")
+    assert m["action_items"][0]["task"] == "Chris will fix the thing"
+    assert m["action_items"][1]["task"] == "Bob will ship the GMP"
+    # text field is preserved too
+    assert m["action_items"][0]["text"] == "Chris will fix the thing"
+
+
+def test_ingest_does_not_overwrite_existing_task(client, storage):
+    """If both task and text are present, prefer task (don't clobber)."""
+    payload = {"meeting": {
+        "id": "rai2", "title": "L10",
+        "start_time": "2026-04-28T15:00:00Z",
+        "summary": "s",
+        "action_items": [{"id": "ai_x", "task": "Explicit task", "text": "Different text"}],
+    }}
+    r = client.post("/api/ingest/readai", json=payload, headers={"X-API-Key": "test-key"})
+    assert r.status_code == 200
+    m = storage.get_meeting("rai2")
+    assert m["action_items"][0]["task"] == "Explicit task"
+
+
+def test_portal_renders_text_only_action_items(client, storage):
+    """Existing meetings with only `text` (no task) should still render readably."""
+    storage.save_meeting({
+        "id": "legacy", "date": "2026-04-28", "title": "L10",
+        "summary": "",
+        "action_items": [
+            {"id": "ai_1", "text": "Tom will follow up with the lender by Friday", "completed": False},
+        ],
+    })
+    body = client.get("/").data.decode()
+    assert "Tom will follow up with the lender by Friday" in body
+
+
+def test_move_text_only_action_to_todos_carries_text(client, storage):
+    """Moving a text-only action item to todos should populate the todo's task."""
+    storage.save_meeting({
+        "id": "m1", "date": "2026-04-28",
+        "action_items": [{"id": "ai_1", "text": "Send the docs", "completed": False}],
+    })
+    r = client.post("/api/action/m1/ai_1/move", headers={"X-API-Key": "test-key"})
+    assert r.status_code == 200
+    todos = storage.list_todos()
+    assert len(todos) == 1 and todos[0]["task"] == "Send the docs"
+
+
 # --- Route tests ---
 
 def test_api_todos_list(client, storage):
